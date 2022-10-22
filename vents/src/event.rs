@@ -1,8 +1,7 @@
-use refs::ToWeak;
+use refs::{ToWeak, Weak};
 use std::{
     cell::RefCell,
     fmt::{Debug, Formatter},
-    ops::DerefMut,
 };
 
 pub struct Event<T = ()> {
@@ -14,10 +13,11 @@ impl<T: 'static> Event<T> {
         self.subscriber.replace(Some(Box::new(action)));
     }
 
-    pub fn set<Obj: 'static>(&self, obj: &Obj, mut action: impl FnMut(&mut Obj, T) + 'static) {
-        let mut rglica = obj.weak();
+    pub fn set<Obj: 'static>(&self, obj: &Obj, mut action: impl FnMut(&mut Weak<Obj>, T) + 'static) {
+        let mut weak = obj.weak();
         self.subscriber.replace(Some(Box::new(move |value| {
-            action(rglica.deref_mut(), value);
+            //let weak = weak.clone();
+            action(&mut weak, value);
         })));
     }
 

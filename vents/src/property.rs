@@ -4,7 +4,7 @@ use crate::Event;
 
 #[derive(Default)]
 pub struct Property<T> {
-    data:       T,
+    data: T,
     pub on_set: Event<T>,
     pub on_get: Event,
 }
