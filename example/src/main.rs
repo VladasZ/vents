@@ -7,8 +7,8 @@ fn main() {
 
     let num = Own::new(5);
 
-    event.set(num.deref(), |n, _| {
-        **n += 1;
+    event.set(num.deref(), |mut n, _| {
+        *n += 1;
         dbg!(n);
     });
 
