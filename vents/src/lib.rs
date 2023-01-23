@@ -14,7 +14,7 @@ mod test {
     fn property() {
         let mut prop = Property::new(5);
         assert_eq!(prop.deref(), &5);
-        prop.on_set.sub(|val| {
+        prop.on_set.val(|val| {
             assert_eq!(val, 10);
         });
         prop.set(10);
@@ -24,7 +24,7 @@ mod test {
     #[test]
     fn event() {
         let event = Event::<u32>::default();
-        event.sub(|val| {
+        event.val(|val| {
             assert_eq!(val, 22);
         });
         event.trigger(22);

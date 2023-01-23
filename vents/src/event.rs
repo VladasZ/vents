@@ -5,11 +5,18 @@ use std::{
 };
 
 pub struct Event<T = ()> {
+    #[allow(clippy::type_complexity)]
     subscriber: RefCell<Option<Box<dyn FnMut(T) + 'static>>>,
 }
 
 impl<T: 'static> Event<T> {
-    pub fn sub(&self, action: impl FnMut(T) + 'static) {
+    pub fn sub(&self, mut action: impl FnMut() + 'static) {
+        self.subscriber.replace(Some(Box::new(move |_| {
+            action();
+        })));
+    }
+
+    pub fn val(&self, action: impl FnMut(T) + 'static) {
         self.subscriber.replace(Some(Box::new(action)));
     }
 
@@ -28,7 +35,7 @@ impl<T: 'static> Event<T> {
         (sub.as_mut().unwrap())(value);
     }
 
-    pub fn unsubscribe(&self) {
+    pub fn remove_subscribers(&self) {
         self.subscriber.replace(Default::default());
     }
 }
