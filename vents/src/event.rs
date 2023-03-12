@@ -7,6 +7,8 @@ use std::{
 pub struct Event<T = ()> {
     #[allow(clippy::type_complexity)]
     subscriber: RefCell<Option<Box<dyn FnMut(T) + 'static>>>,
+    #[allow(clippy::type_complexity)]
+    once_subscriber: RefCell<Option<Box<dyn FnOnce(T) + 'static>>>,
 }
 
 impl<T: 'static> Event<T> {
@@ -20,6 +22,10 @@ impl<T: 'static> Event<T> {
         self.subscriber.replace(Some(Box::new(action)));
     }
 
+    pub fn once(&self, action: impl FnOnce(T) + 'static) {
+        self.once_subscriber.replace(Some(Box::new(action)));
+    }
+
     pub fn set<Obj: 'static>(&self, obj: &Obj, mut action: impl FnMut(Weak<Obj>, T) + 'static) {
         let weak = obj.weak();
         self.subscriber.replace(Some(Box::new(move |value| {
@@ -29,14 +35,17 @@ impl<T: 'static> Event<T> {
 
     pub fn trigger(&self, value: T) {
         let mut sub = self.subscriber.borrow_mut();
-        if sub.is_none() {
-            return;
+        let mut once = self.once_subscriber.borrow_mut();
+        if let Some(sub) = sub.as_mut() {
+            (sub)(value)
+        } else if let Some(sub) = once.take() {
+            (sub)(value)
         }
-        (sub.as_mut().unwrap())(value);
     }
 
     pub fn remove_subscribers(&self) {
         self.subscriber.replace(Default::default());
+        self.once_subscriber.replace(Default::default());
     }
 }
 
@@ -44,6 +53,7 @@ impl<T> Default for Event<T> {
     fn default() -> Self {
         Self {
             subscriber: Default::default(),
+            once_subscriber: Default::default(),
         }
     }
 }

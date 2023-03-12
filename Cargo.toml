@@ -1,8 +1,5 @@
 [workspace]
 
-members = [
-    "vents",
-    "example",
-]
+members = ["vents", "example"]
 
 default-members = ["example"]
