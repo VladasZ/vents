@@ -1,4 +1,3 @@
-use refs::{ToWeak, Weak};
 use std::{
     cell::RefCell,
     fmt::{Debug, Formatter},
@@ -24,13 +23,6 @@ impl<T: 'static> Event<T> {
 
     pub fn once(&self, action: impl FnOnce(T) + 'static) {
         self.once_subscriber.replace(Some(Box::new(action)));
-    }
-
-    pub fn set<Obj: 'static>(&self, obj: &Obj, mut action: impl FnMut(Weak<Obj>, T) + 'static) {
-        let weak = obj.weak();
-        self.subscriber.replace(Some(Box::new(move |value| {
-            action(weak, value);
-        })));
     }
 
     pub fn trigger(&self, value: T) {

@@ -7,7 +7,6 @@ pub use property::*;
 #[cfg(test)]
 mod test {
     use crate::{Event, Property};
-    use refs::{set_current_thread_as_main, Own};
     use std::cell::RefCell;
     use std::ops::Deref;
     use std::rc::Rc;
@@ -43,7 +42,6 @@ mod test {
         event.remove_subscribers();
         event.trigger(20);
         assert_eq!(*check.borrow(), 40);
-
     }
 
     #[test]
@@ -62,17 +60,5 @@ mod test {
         assert_eq!(*check.borrow(), 20);
         event.trigger(20);
         assert_eq!(*check.borrow(), 20);
-    }
-
-    #[test]
-    fn event_set() {
-        set_current_thread_as_main();
-        let event = Event::<u32>::default();
-        let own = Own::new(5);
-        event.set(own.deref(), |rf, val| {
-            assert_eq!(rf.deref(), &5);
-            assert_eq!(val, 27);
-        });
-        event.trigger(27);
     }
 }
