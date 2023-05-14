@@ -3,12 +3,12 @@ use std::{fmt::Debug, ops::Deref};
 use crate::Event;
 
 #[derive(Default)]
-pub struct Property<T> {
+pub struct Property<T: Send> {
     data:       T,
     pub on_set: Event<T>,
 }
 
-impl<T: 'static + Clone> Property<T> {
+impl<T: 'static + Send + Clone> Property<T> {
     pub fn new(data: T) -> Self {
         Self {
             data,
@@ -22,14 +22,14 @@ impl<T: 'static + Clone> Property<T> {
     }
 }
 
-impl<T> Deref for Property<T> {
+impl<T: Send> Deref for Property<T> {
     type Target = T;
     fn deref(&self) -> &T {
         &self.data
     }
 }
 
-impl<T: Debug> Debug for Property<T> {
+impl<T: Send + Debug> Debug for Property<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.data.fmt(f)
     }
