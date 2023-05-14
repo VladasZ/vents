@@ -6,10 +6,16 @@ pub use property::*;
 
 #[cfg(test)]
 mod test {
+    use std::{
+        cell::RefCell,
+        ops::Deref,
+        rc::Rc,
+        sync::{Arc, Mutex},
+    };
+
+    use tokio::spawn;
+
     use crate::{Event, Property};
-    use std::cell::RefCell;
-    use std::ops::Deref;
-    use std::rc::Rc;
 
     #[test]
     fn property() {
@@ -60,5 +66,30 @@ mod test {
         assert_eq!(*check.borrow(), 20);
         event.trigger(20);
         assert_eq!(*check.borrow(), 20);
+    }
+
+    #[tokio::test]
+    async fn event_once_async() {
+        let event = Event::<u32>::default();
+        let summ = Arc::new(Mutex::new(0));
+
+        let recv = event.once_async();
+
+        let res_summ = summ.clone();
+        let join = spawn(async move {
+            assert_eq!(summ.lock().unwrap().deref(), &0);
+
+            let val = recv.await.unwrap();
+
+            assert_eq!(val, 10);
+
+            *summ.lock().unwrap() += val;
+        });
+
+        event.trigger(10);
+
+        join.await.unwrap();
+
+        assert_eq!(*res_summ.lock().unwrap(), 10);
     }
 }

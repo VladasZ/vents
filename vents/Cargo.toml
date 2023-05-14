@@ -1,6 +1,6 @@
 [package]
 name = "vents"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 authors = ["Vladas Zakrevksis <146100@gmail.com>"]
 description = "Events system"
@@ -9,4 +9,5 @@ homepage = "https://github.com/VladasZ/vents"
 repository = "https://github.com/VladasZ/vents"
 
 [dependencies]
-refs = "0.1.29"
+log = "0.4.17"
+tokio = { version = "1.26.0", features = ["full"] }

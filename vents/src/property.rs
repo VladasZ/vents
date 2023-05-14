@@ -1,11 +1,10 @@
-use std::fmt::Debug;
-use std::ops::Deref;
+use std::{fmt::Debug, ops::Deref};
 
 use crate::Event;
 
 #[derive(Default)]
 pub struct Property<T> {
-    data: T,
+    data:       T,
     pub on_set: Event<T>,
 }
 
