@@ -1,6 +1,6 @@
 [package]
 name = "vents"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 authors = ["Vladas Zakrevksis <146100@gmail.com>"]
 description = "Events system"

@@ -7,7 +7,9 @@ pub use property::*;
 #[cfg(test)]
 mod test {
     use std::{
+        cell::RefCell,
         ops::Deref,
+        rc::Rc,
         sync::{Arc, Mutex},
     };
 
@@ -29,41 +31,41 @@ mod test {
     #[test]
     fn event() {
         let event = Event::<u32>::default();
-        let summ = Arc::new(Mutex::new(0));
+        let summ = Rc::new(RefCell::new(0));
 
         let check = summ.clone();
 
         event.val(move |val| {
-            *summ.lock().unwrap() += val;
+            *summ.borrow_mut() += val;
         });
 
-        assert_eq!(*check.lock().unwrap(), 0);
+        assert_eq!(*check.borrow(), 0);
         event.trigger(20);
-        assert_eq!(*check.lock().unwrap(), 20);
+        assert_eq!(*check.borrow(), 20);
         event.trigger(20);
-        assert_eq!(*check.lock().unwrap(), 40);
+        assert_eq!(*check.borrow(), 40);
 
         event.remove_subscribers();
         event.trigger(20);
-        assert_eq!(*check.lock().unwrap(), 40);
+        assert_eq!(*check.borrow(), 40);
     }
 
     #[test]
     fn event_once() {
         let event = Event::<u32>::default();
-        let summ = Arc::new(Mutex::new(0));
+        let summ = Rc::new(RefCell::new(0));
 
         let check = summ.clone();
 
         event.once(move |val| {
-            *summ.lock().unwrap() += val;
+            *summ.borrow_mut() += val;
         });
 
-        assert_eq!(*check.lock().unwrap(), 0);
+        assert_eq!(*check.borrow(), 0);
         event.trigger(20);
-        assert_eq!(*check.lock().unwrap(), 20);
+        assert_eq!(*check.borrow(), 20);
         event.trigger(20);
-        assert_eq!(*check.lock().unwrap(), 20);
+        assert_eq!(*check.borrow(), 20);
     }
 
     #[tokio::test]
@@ -84,11 +86,8 @@ mod test {
             *summ.lock().unwrap() += val;
         });
 
-        let join2 = spawn(async move {
-            event.trigger(10);
-        });
+        event.trigger(10);
 
-        join2.await.unwrap();
         join.await.unwrap();
 
         assert_eq!(*res_summ.lock().unwrap(), 10);
