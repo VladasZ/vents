@@ -1,6 +1,8 @@
+mod delayed_event;
 pub mod event;
 pub mod property;
 
+pub use delayed_event::*;
 pub use event::*;
 pub use property::*;
 
