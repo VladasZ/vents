@@ -84,14 +84,11 @@ impl<T: 'static> DelayedEvent<T> {
                 return;
             }
 
-            // dbg!(&vent.queue);
-
             if vent.queue.last().unwrap() != &timestamp {
                 return;
             }
 
             if let Some(sub) = vent.subscriber.as_mut() {
-                // dbg!(&value);
                 sub(value);
             }
 
@@ -180,6 +177,13 @@ mod test {
 
         event.trigger(50);
         event.trigger(60);
+
+        sleep(Duration::from_millis(510)).await;
+
+        event.trigger(70);
+        event.trigger(90);
+
+        drop(event);
 
         sleep(Duration::from_millis(510)).await;
 
