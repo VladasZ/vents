@@ -84,6 +84,10 @@ impl<T: 'static> DelayedEvent<T> {
                 return;
             }
 
+            if vent.queue.is_empty() {
+                return;
+            }
+
             if vent.queue.last().unwrap() != &timestamp {
                 return;
             }
