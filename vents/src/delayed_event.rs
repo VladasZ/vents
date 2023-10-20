@@ -68,7 +68,7 @@ impl<T: 'static> DelayedEvent<T> {
             }
         }
 
-        let timestamp = Utc::now().timestamp_nanos();
+        let timestamp = Utc::now().timestamp_micros();
         vent.queue.push(timestamp);
 
         drop(vent);
