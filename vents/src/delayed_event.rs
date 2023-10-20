@@ -15,14 +15,6 @@ struct Vent<T> {
     dropped:    bool,
 }
 
-impl<T> Vent<T> {
-    fn check_empty(&self) {
-        if self.subscriber.is_some() {
-            panic!("Event already has a subscriber");
-        }
-    }
-}
-
 pub struct DelayedEvent<T = ()> {
     vent: Arc<Mutex<Vent<T>>>,
 }
@@ -37,17 +29,12 @@ impl<T: 'static> DelayedEvent<T> {
         self
     }
 
-    pub fn sub(&self, mut action: impl FnMut() + Send + 'static) {
-        let mut vent = self.vent.lock().unwrap();
-        vent.check_empty();
-        vent.subscriber = Some(Box::new(move |_| {
-            action();
-        }));
-    }
-
     pub fn val(&self, action: impl FnMut(T) + Send + 'static) {
         let mut vent = self.vent.lock().unwrap();
-        vent.check_empty();
+        if vent.subscriber.is_some() {
+            drop(vent);
+            panic!("Event already has a subscriber");
+        }
         vent.subscriber = Some(Box::new(action));
     }
 
@@ -144,7 +131,7 @@ mod test {
 
     #[tokio::test]
     async fn delayed_event() {
-        let event = DelayedEvent::<i32>::default().with_delay(0.5);
+        let event = DelayedEvent::<i32>::default().with_delay(0.25);
 
         let data: Arc<Mutex<Vec<i32>>> = Arc::new(Mutex::new(vec![]));
 
@@ -155,7 +142,7 @@ mod test {
 
         event.trigger(10);
 
-        sleep(Duration::from_millis(510)).await;
+        sleep(Duration::from_millis(260)).await;
 
         for _ in 0..100 {
             event.trigger(20);
@@ -173,24 +160,69 @@ mod test {
             event.trigger(36);
         }
 
-        sleep(Duration::from_millis(510)).await;
+        sleep(Duration::from_millis(260)).await;
 
         event.trigger(40);
 
-        sleep(Duration::from_millis(510)).await;
+        sleep(Duration::from_millis(260)).await;
 
         event.trigger(50);
         event.trigger(60);
 
-        sleep(Duration::from_millis(510)).await;
+        sleep(Duration::from_millis(260)).await;
 
         event.trigger(70);
         event.trigger(90);
 
         drop(event);
 
-        sleep(Duration::from_millis(510)).await;
+        sleep(Duration::from_millis(260)).await;
 
         assert_eq!(data.lock().unwrap().deref(), &vec![10, 36, 40, 60]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Event already has a subscriber")]
+    fn double_subscriber() {
+        let event: DelayedEvent = DelayedEvent::default();
+        event.val(|_| {});
+        event.val(|_| {});
+    }
+
+    #[tokio::test]
+    async fn remove_subscriber() {
+        let event = DelayedEvent::<i32>::default();
+
+        event.set_delay(0.1);
+
+        let data: Arc<Mutex<Vec<i32>>> = Arc::new(Mutex::new(vec![]));
+
+        let data_clone = data.clone();
+        event.val(move |value| {
+            data_clone.lock().unwrap().push(value);
+        });
+
+        event.trigger(10);
+
+        sleep(Duration::from_millis(50)).await;
+
+        event.trigger(20);
+
+        sleep(Duration::from_millis(110)).await;
+
+        event.remove_subscribers();
+
+        event.trigger(30);
+        sleep(Duration::from_millis(110)).await;
+
+        assert_eq!(data.lock().unwrap().deref(), &vec![20]);
+    }
+
+    #[test]
+    fn debug() {
+        assert_eq!(
+            "DelayedEvent<i32>",
+            &format!("{:?}", DelayedEvent::<i32>::default())
+        );
     }
 }

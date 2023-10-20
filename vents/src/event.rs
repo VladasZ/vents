@@ -168,4 +168,17 @@ mod test {
 
         assert_eq!(*res_summ.lock().unwrap(), 10);
     }
+
+    #[test]
+    #[should_panic(expected = "Event already has a subscriber")]
+    fn double_subscriber() {
+        let event: Event = Event::default();
+        event.sub(|| {});
+        event.sub(|| {});
+    }
+
+    #[test]
+    fn debug() {
+        assert_eq!("Event<i32>", &format!("{:?}", Event::<i32>::default()));
+    }
 }
