@@ -4,28 +4,16 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
-use log::error;
-use tokio::sync::oneshot::{channel, Receiver, Sender};
+type Callback<T> = Box<dyn FnMut(T) + 'static>;
 
 pub struct Event<T = ()> {
-    #[allow(clippy::type_complexity)]
-    subscriber:      RefCell<Option<Box<dyn FnMut(T) + 'static>>>,
-    #[allow(clippy::type_complexity)]
-    once_subscriber: RefCell<Option<Box<dyn FnOnce(T) + 'static>>>,
-
-    once_sender: RefCell<Option<Sender<T>>>,
+    subscriber: RefCell<Option<Callback<T>>>,
 }
 
 impl<T: 'static> Event<T> {
     fn check_empty(&self) {
         if self.subscriber.borrow().is_some() {
             panic!("Event already has a subscriber");
-        }
-        if self.once_subscriber.borrow().is_some() {
-            panic!("Event already has a once_subscriber");
-        }
-        if self.once_sender.borrow().is_some() {
-            panic!("Event already has a once_sender");
         }
     }
 
@@ -41,46 +29,21 @@ impl<T: 'static> Event<T> {
         self.subscriber.replace(Some(Box::new(action)));
     }
 
-    pub fn once(&self, action: impl FnOnce(T) + 'static) {
-        self.check_empty();
-        self.once_subscriber.replace(Some(Box::new(action)));
-    }
-
-    pub fn once_async(&self) -> Receiver<T> {
-        self.check_empty();
-        let (s, r) = channel();
-        self.once_sender.replace(s.into());
-        r
-    }
-
     pub fn trigger(&self, value: T) {
-        let mut sub = self.subscriber.borrow_mut();
-        let mut once = self.once_subscriber.borrow_mut();
-        let mut send = self.once_sender.borrow_mut();
-        if let Some(sub) = sub.as_mut() {
+        if let Some(sub) = self.subscriber.borrow_mut().as_mut() {
             (sub)(value)
-        } else if let Some(sub) = once.take() {
-            (sub)(value)
-        } else if let Some(send) = send.take() {
-            if send.send(value).is_err() {
-                error!("Failed to once send Event of type: {}", type_name::<T>())
-            }
         }
     }
 
     pub fn remove_subscribers(&self) {
         self.subscriber.replace(Default::default());
-        self.once_subscriber.replace(Default::default());
-        self.once_sender.replace(Default::default());
     }
 }
 
 impl<T> Default for Event<T> {
     fn default() -> Self {
         Self {
-            subscriber:      Default::default(),
-            once_subscriber: Default::default(),
-            once_sender:     Default::default(),
+            subscriber: Default::default(),
         }
     }
 }
@@ -93,14 +56,7 @@ impl<T> Debug for Event<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        cell::RefCell,
-        ops::Deref,
-        rc::Rc,
-        sync::{Arc, Mutex},
-    };
-
-    use tokio::spawn;
+    use std::{cell::RefCell, rc::Rc};
 
     use crate::Event;
 
@@ -124,49 +80,6 @@ mod test {
         event.remove_subscribers();
         event.trigger(20);
         assert_eq!(*check.borrow(), 40);
-    }
-
-    #[test]
-    fn event_once() {
-        let event = Event::<u32>::default();
-        let summ = Rc::new(RefCell::new(0));
-
-        let check = summ.clone();
-
-        event.once(move |val| {
-            *summ.borrow_mut() += val;
-        });
-
-        assert_eq!(*check.borrow(), 0);
-        event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
-        event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
-    }
-
-    #[tokio::test]
-    async fn event_once_async() {
-        let event = Event::<u32>::default();
-        let summ = Arc::new(Mutex::new(0));
-
-        let recv = event.once_async();
-
-        let res_summ = summ.clone();
-        let join = spawn(async move {
-            assert_eq!(summ.lock().unwrap().deref(), &0);
-
-            let val = recv.await.unwrap();
-
-            assert_eq!(val, 10);
-
-            *summ.lock().unwrap() += val;
-        });
-
-        event.trigger(10);
-
-        join.await.unwrap();
-
-        assert_eq!(*res_summ.lock().unwrap(), 10);
     }
 
     #[test]
