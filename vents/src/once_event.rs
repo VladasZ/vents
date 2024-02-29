@@ -24,12 +24,17 @@ impl<T: 'static> OnceEvent<T> {
         }
     }
 
-    pub fn once(&self, action: impl FnOnce(T) + 'static) {
+    pub fn sub(&self, action: impl FnOnce() + 'static) {
+        self.check_empty();
+        self.once_subscriber.replace(Some(Box::new(|_| action())));
+    }
+
+    pub fn val(&self, action: impl FnOnce(T) + 'static) {
         self.check_empty();
         self.once_subscriber.replace(Some(Box::new(action)));
     }
 
-    pub fn once_async(&self) -> Receiver<T> {
+    pub fn val_async(&self) -> Receiver<T> {
         self.check_empty();
         let (s, r) = channel();
         self.once_sender.replace(s.into());
@@ -88,7 +93,7 @@ mod test {
         let check = summ.clone();
 
         let sum_2 = summ.clone();
-        event.once(move |val| {
+        event.val(move |val| {
             *sum_2.borrow_mut() += val;
         });
 
@@ -98,7 +103,7 @@ mod test {
         event.trigger(20);
         assert_eq!(*check.borrow(), 20);
 
-        event.once(move |val| {
+        event.val(move |val| {
             *summ.borrow_mut() += val;
         });
 
@@ -113,7 +118,7 @@ mod test {
         let event = OnceEvent::<u32>::default();
         let summ = Arc::new(Mutex::new(0));
 
-        let recv = event.once_async();
+        let recv = event.val_async();
 
         let res_summ = summ.clone();
         let join = spawn(async move {
@@ -137,8 +142,8 @@ mod test {
     #[should_panic(expected = "Event already has once_subscriber")]
     fn double_subscriber() {
         let event: OnceEvent = OnceEvent::default();
-        event.once(|_| {});
-        event.once(|_| {});
+        event.sub(|| {});
+        event.val(|_| {});
     }
 
     #[test]
