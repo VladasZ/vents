@@ -16,12 +16,14 @@ pub struct OnceEvent<T = ()> {
 
 impl<T: 'static> OnceEvent<T> {
     fn check_empty(&self) {
-        if self.once_sender.borrow().is_some() {
-            panic!("Event already has once_sender");
-        }
-        if self.once_subscriber.borrow().is_some() {
-            panic!("Event already has once_subscriber");
-        }
+        assert!(
+            self.once_sender.borrow().is_none(),
+            "Event already has once_sender"
+        );
+        assert!(
+            self.once_subscriber.borrow().is_none(),
+            "Event already has once_subscriber"
+        );
     }
 
     pub fn sub(&self, action: impl FnOnce() + 'static) {
@@ -43,25 +45,25 @@ impl<T: 'static> OnceEvent<T> {
 
     pub fn trigger(&self, value: T) {
         if let Some(sub) = self.once_subscriber.borrow_mut().take() {
-            (sub)(value)
+            (sub)(value);
         } else if let Some(send) = self.once_sender.borrow_mut().take() {
             if send.send(value).is_err() {
-                error!("Failed to once send OnceEvent of type: {}", type_name::<T>())
+                error!("Failed to once send OnceEvent of type: {}", type_name::<T>());
             }
         }
     }
 
     pub fn remove_subscribers(&self) {
-        self.once_subscriber.replace(Default::default());
-        self.once_sender.replace(Default::default());
+        self.once_subscriber.replace(None);
+        self.once_sender.replace(None);
     }
 }
 
 impl<T> Default for OnceEvent<T> {
     fn default() -> Self {
         Self {
-            once_subscriber: Default::default(),
-            once_sender:     Default::default(),
+            once_subscriber: RefCell::default(),
+            once_sender:     RefCell::default(),
         }
     }
 }

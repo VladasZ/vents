@@ -63,6 +63,8 @@ impl<T: 'static> DelayedEvent<T> {
         let vent = self.vent.clone();
 
         spawn(async move {
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
             sleep(Duration::from_millis((delay * 1000.0) as _)).await;
 
             let mut vent = vent.lock().unwrap();
@@ -88,7 +90,7 @@ impl<T: 'static> DelayedEvent<T> {
     }
 
     pub fn remove_subscribers(&self) {
-        self.vent.lock().unwrap().subscriber = Default::default();
+        self.vent.lock().unwrap().subscriber = None;
     }
 }
 

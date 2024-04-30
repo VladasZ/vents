@@ -12,9 +12,10 @@ pub struct Event<T = ()> {
 
 impl<T: 'static> Event<T> {
     fn check_empty(&self) {
-        if self.subscriber.borrow().is_some() {
-            panic!("Event already has a subscriber");
-        }
+        assert!(
+            self.subscriber.borrow().is_none(),
+            "Event already has a subscriber"
+        );
     }
 
     pub fn sub(&self, mut action: impl FnMut() + 'static) {
@@ -31,19 +32,19 @@ impl<T: 'static> Event<T> {
 
     pub fn trigger(&self, value: T) {
         if let Some(sub) = self.subscriber.borrow_mut().as_mut() {
-            (sub)(value)
+            (sub)(value);
         }
     }
 
     pub fn remove_subscribers(&self) {
-        self.subscriber.replace(Default::default());
+        self.subscriber.replace(None);
     }
 }
 
 impl<T> Default for Event<T> {
     fn default() -> Self {
         Self {
-            subscriber: Default::default(),
+            subscriber: RefCell::default(),
         }
     }
 }
