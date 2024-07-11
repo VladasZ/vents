@@ -4,7 +4,7 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
-type Callback<T> = Box<dyn FnMut(T) + 'static>;
+type Callback<T> = Box<dyn FnMut(T) + Send + 'static>;
 
 pub struct Event<T = ()> {
     subscriber: RefCell<Option<Callback<T>>>,
@@ -18,14 +18,14 @@ impl<T: 'static> Event<T> {
         );
     }
 
-    pub fn sub(&self, mut action: impl FnMut() + 'static) {
+    pub fn sub(&self, mut action: impl FnMut() + Send + 'static) {
         self.check_empty();
         self.subscriber.replace(Some(Box::new(move |_| {
             action();
         })));
     }
 
-    pub fn val(&self, action: impl FnMut(T) + 'static) {
+    pub fn val(&self, action: impl FnMut(T) + Send + 'static) {
         self.check_empty();
         self.subscriber.replace(Some(Box::new(action)));
     }
@@ -57,30 +57,30 @@ impl<T> Debug for Event<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{cell::RefCell, rc::Rc};
+    use std::sync::{Arc, Mutex};
 
     use crate::Event;
 
     #[test]
     fn event() {
         let event = Event::<u32>::default();
-        let summ = Rc::new(RefCell::new(0));
 
-        let check = summ.clone();
+        let summ = Arc::new(Mutex::new(0));
 
+        let summ_2 = summ.clone();
         event.val(move |val| {
-            *summ.borrow_mut() += val;
+            *summ_2.lock().unwrap() += val;
         });
 
-        assert_eq!(*check.borrow(), 0);
+        assert_eq!(*summ.lock().unwrap(), 0);
         event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
+        assert_eq!(*summ.lock().unwrap(), 20);
         event.trigger(20);
-        assert_eq!(*check.borrow(), 40);
+        assert_eq!(*summ.lock().unwrap(), 40);
 
         event.remove_subscribers();
         event.trigger(20);
-        assert_eq!(*check.borrow(), 40);
+        assert_eq!(*summ.lock().unwrap(), 40);
     }
 
     #[test]

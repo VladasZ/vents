@@ -7,7 +7,7 @@ use std::{
 use log::error;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
-type Callback<T> = Box<dyn FnOnce(T) + 'static>;
+type Callback<T> = Box<dyn FnOnce(T) + Send + 'static>;
 
 pub struct OnceEvent<T = ()> {
     once_subscriber: RefCell<Option<Callback<T>>>,
@@ -26,12 +26,12 @@ impl<T: 'static> OnceEvent<T> {
         );
     }
 
-    pub fn sub(&self, action: impl FnOnce() + 'static) {
+    pub fn sub(&self, action: impl FnOnce() + Send + 'static) {
         self.check_empty();
         self.once_subscriber.replace(Some(Box::new(|_| action())));
     }
 
-    pub fn val(&self, action: impl FnOnce(T) + 'static) {
+    pub fn val(&self, action: impl FnOnce(T) + Send + 'static) {
         self.check_empty();
         self.once_subscriber.replace(Some(Box::new(action)));
     }
@@ -77,9 +77,7 @@ impl<T> Debug for OnceEvent<T> {
 #[cfg(test)]
 mod test {
     use std::{
-        cell::RefCell,
         ops::Deref,
-        rc::Rc,
         sync::{Arc, Mutex},
     };
 
@@ -90,29 +88,29 @@ mod test {
     #[test]
     fn event_once() {
         let event = OnceEvent::<u32>::default();
-        let summ = Rc::new(RefCell::new(0));
+        let summ = Arc::new(Mutex::new(0));
 
         let check = summ.clone();
 
         let sum_2 = summ.clone();
         event.val(move |val| {
-            *sum_2.borrow_mut() += val;
+            *sum_2.lock().unwrap() += val;
         });
 
-        assert_eq!(*check.borrow(), 0);
+        assert_eq!(*check.lock().unwrap(), 0);
         event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
+        assert_eq!(*check.lock().unwrap(), 20);
         event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
+        assert_eq!(*check.lock().unwrap(), 20);
 
         event.val(move |val| {
-            *summ.borrow_mut() += val;
+            *summ.lock().unwrap() += val;
         });
 
         event.remove_subscribers();
 
         event.trigger(20);
-        assert_eq!(*check.borrow(), 20);
+        assert_eq!(*check.lock().unwrap(), 20);
     }
 
     #[tokio::test]
