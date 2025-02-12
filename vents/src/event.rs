@@ -11,6 +11,12 @@ pub struct Event<T = ()> {
 }
 
 impl<T: 'static> Event<T> {
+    pub const fn const_default() -> Self {
+        Self {
+            subscriber: RefCell::new(None),
+        }
+    }
+
     fn check_empty(&self) {
         assert!(
             self.subscriber.borrow().is_none(),
@@ -83,10 +89,12 @@ mod test {
         assert_eq!(*summ.lock().unwrap(), 40);
     }
 
+    static EVENT: Mutex<Event<()>> = Mutex::new(Event::const_default());
+
     #[test]
     #[should_panic(expected = "Event already has a subscriber")]
     fn double_subscriber() {
-        let event: Event = Event::default();
+        let event = EVENT.lock().unwrap();
         event.sub(|| {});
         event.sub(|| {});
     }
