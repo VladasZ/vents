@@ -2,10 +2,12 @@ use std::{
     any::type_name,
     cell::RefCell,
     fmt::{Debug, Formatter},
+    future::{Future, IntoFuture},
+    pin::Pin,
 };
 
 use log::error;
-use tokio::sync::oneshot::{channel, Receiver, Sender};
+use tokio::sync::oneshot::{channel, error::RecvError, Receiver, Sender};
 
 type Callback<T> = Box<dyn FnOnce(T) + Send + 'static>;
 
@@ -66,6 +68,16 @@ impl<T: 'static> OnceEvent<T> {
     }
 }
 
+impl<T: 'static + Send> IntoFuture for &OnceEvent<T> {
+    type Output = Result<T, RecvError>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + Send>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        let recv = self.val_async();
+        Box::pin(recv)
+    }
+}
+
 impl<T> Default for OnceEvent<T> {
     fn default() -> Self {
         Self {
@@ -84,6 +96,7 @@ impl<T> Debug for OnceEvent<T> {
 #[cfg(test)]
 mod test {
     use std::{
+        future::IntoFuture,
         ops::Deref,
         sync::{Arc, Mutex},
     };
@@ -121,17 +134,17 @@ mod test {
     }
 
     #[tokio::test]
-    async fn event_once_async() {
+    async fn event_once_await() {
         let event = OnceEvent::<u32>::default();
         let summ = Arc::new(Mutex::new(0));
 
-        let recv = event.val_async();
+        let future = event.into_future();
 
         let res_summ = summ.clone();
         let join = spawn(async move {
             assert_eq!(summ.lock().unwrap().deref(), &0);
 
-            let val = recv.await.unwrap();
+            let val = future.await.unwrap();
 
             assert_eq!(val, 10);
 
