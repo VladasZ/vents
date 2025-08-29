@@ -2,6 +2,9 @@ mod delayed_event;
 mod event;
 mod once_event;
 
-pub use delayed_event::*;
 pub use event::*;
-pub use once_event::*;
+
+#[cfg(feature = "tokio")]
+pub mod tokio {
+    pub use crate::{delayed_event::*, once_event::*};
+}

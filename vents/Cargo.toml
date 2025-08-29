@@ -1,6 +1,6 @@
 [package]
 name = "vents"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 authors = ["Vladas Zakrevksis <146100@gmail.com>"]
 description = "Events system"
@@ -8,7 +8,11 @@ license = "MIT OR Apache-2.0"
 homepage = "https://github.com/VladasZ/vents"
 repository = "https://github.com/VladasZ/vents"
 
+[features]
+default = []
+tokio = ["dep:tokio"]
+
 [dependencies]
 log = "0.4"
 chrono = "0.4"
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.47", features = ["full"], optional = true }

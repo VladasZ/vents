@@ -1,3 +1,5 @@
+#![cfg(feature = "tokio")]
+
 use std::{
     any::type_name,
     fmt::{Debug, Formatter},
@@ -128,7 +130,7 @@ mod test {
 
     use tokio::time::sleep;
 
-    use crate::DelayedEvent;
+    use crate::tokio::DelayedEvent;
 
     #[tokio::test]
     async fn delayed_event() {

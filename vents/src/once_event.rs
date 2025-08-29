@@ -1,3 +1,5 @@
+#![cfg(feature = "tokio")]
+
 use std::{
     any::type_name,
     cell::RefCell,
@@ -103,7 +105,7 @@ mod test {
 
     use tokio::spawn;
 
-    use crate::OnceEvent;
+    use crate::tokio::OnceEvent;
 
     #[test]
     fn event_once() {
