@@ -18,3 +18,8 @@ test:
 	cargo test --all
 	cargo test --all --release
 	cargo test --all --release --features tokio
+	make test-wasm
+
+test-wasm:
+	cargo install wasm-pack
+	cd vents && wasm-pack test --firefox --headless
