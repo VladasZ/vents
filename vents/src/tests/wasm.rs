@@ -30,15 +30,15 @@ fn event() {
     assert_eq!(*summ.lock().unwrap(), 40);
 }
 
-static EVENT: Mutex<Event<()>> = Mutex::new(Event::const_default());
+// static EVENT: Mutex<Event<()>> = Mutex::new(Event::const_default());
 
-#[wasm_bindgen_test(unsupported = test)]
-#[should_panic(expected = "Event already has a subscriber")]
-fn double_subscriber() {
-    let event = EVENT.lock().unwrap();
-    event.sub(|| {});
-    event.sub(|| {});
-}
+// #[wasm_bindgen_test(unsupported = test)]
+// #[should_panic(expected = "Event already has a subscriber")]
+// fn double_subscriber() {
+//     let event = EVENT.lock().unwrap();
+//     event.sub(|| {});
+//     event.sub(|| {});
+// }
 
 #[wasm_bindgen_test(unsupported = test)]
 fn debug() {

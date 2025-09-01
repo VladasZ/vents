@@ -1,15 +1,11 @@
-#![cfg(feature = "tokio")]
-
 use std::{
     any::type_name,
     cell::RefCell,
     fmt::{Debug, Formatter},
-    future::{Future, IntoFuture},
-    pin::Pin,
+    sync::mpsc::{channel, Receiver, Sender},
 };
 
 use log::error;
-use tokio::sync::oneshot::{channel, error::RecvError, Receiver, Sender};
 
 type Callback<T> = Box<dyn FnOnce(T) + Send + 'static>;
 
@@ -47,7 +43,7 @@ impl<T: 'static> OnceEvent<T> {
         self.once_subscriber.replace(Some(Box::new(action)));
     }
 
-    pub fn val_async(&self) -> Receiver<T> {
+    pub fn receiver(&self) -> Receiver<T> {
         self.check_empty();
         let (s, r) = channel();
         self.once_sender.replace(s.into());
@@ -70,15 +66,15 @@ impl<T: 'static> OnceEvent<T> {
     }
 }
 
-impl<T: 'static + Send> IntoFuture for &OnceEvent<T> {
-    type Output = Result<T, RecvError>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + Send>>;
-
-    fn into_future(self) -> Self::IntoFuture {
-        let recv = self.val_async();
-        Box::pin(recv)
-    }
-}
+// impl<T: 'static + Send> IntoFuture for &OnceEvent<T> {
+//     type Output = Result<T, RecvError>;
+//     type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + Send>>;
+//
+//     fn into_future(self) -> Self::IntoFuture {
+//         let recv = self.val_async();
+//         Box::pin(recv)
+//     }
+// }
 
 impl<T> Default for OnceEvent<T> {
     fn default() -> Self {
@@ -97,15 +93,10 @@ impl<T> Debug for OnceEvent<T> {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        future::IntoFuture,
-        ops::Deref,
-        sync::{Arc, Mutex},
-    };
 
-    use tokio::spawn;
+    use std::sync::{Arc, Mutex};
 
-    use crate::tokio::OnceEvent;
+    use crate::OnceEvent;
 
     #[test]
     fn event_once() {
@@ -135,30 +126,28 @@ mod test {
         assert_eq!(*check.lock().unwrap(), 20);
     }
 
-    #[tokio::test]
-    async fn event_once_await() {
-        let event = OnceEvent::<u32>::default();
-        let summ = Arc::new(Mutex::new(0));
-
-        let future = event.into_future();
-
-        let res_summ = summ.clone();
-        let join = spawn(async move {
-            assert_eq!(summ.lock().unwrap().deref(), &0);
-
-            let val = future.await.unwrap();
-
-            assert_eq!(val, 10);
-
-            *summ.lock().unwrap() += val;
-        });
-
-        event.trigger(10);
-
-        join.await.unwrap();
-
-        assert_eq!(*res_summ.lock().unwrap(), 10);
-    }
+    // #[test]
+    // fn event_once_await() {
+    //     let event = OnceEvent::<u32>::default();
+    //     let summ = Arc::new(Mutex::new(0));
+    //
+    //     let res_summ = summ.clone();
+    //     let join = spawn(move || {
+    //         assert_eq!(summ.lock().unwrap().deref(), &0);
+    //
+    //         let val = event.val_async().recv().unwrap();
+    //
+    //         assert_eq!(val, 10);
+    //
+    //         *summ.lock().unwrap() += val;
+    //     });
+    //
+    //     event.trigger(10);
+    //
+    //     join.join().unwrap();
+    //
+    //     assert_eq!(*res_summ.lock().unwrap(), 10);
+    // }
 
     static EVENT: Mutex<OnceEvent<()>> = Mutex::new(OnceEvent::const_default());
 

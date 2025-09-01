@@ -23,3 +23,7 @@ test:
 test-wasm:
 	cargo install wasm-pack
 	cd vents && wasm-pack test --firefox --headless
+
+test-browser:
+	cargo install wasm-pack
+	cd vents && wasm-pack test --firefox
