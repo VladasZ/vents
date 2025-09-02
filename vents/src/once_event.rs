@@ -96,9 +96,11 @@ mod test {
 
     use std::sync::{Arc, Mutex};
 
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use crate::OnceEvent;
 
-    #[test]
+    #[wasm_bindgen_test(unsupported = test)]
     fn event_once() {
         let event = OnceEvent::<u32>::default();
         let summ = Arc::new(Mutex::new(0));
@@ -151,7 +153,7 @@ mod test {
 
     static EVENT: Mutex<OnceEvent<()>> = Mutex::new(OnceEvent::const_default());
 
-    #[test]
+    #[wasm_bindgen_test(unsupported = test)]
     #[should_panic(expected = "Event already has once_subscriber")]
     fn double_subscriber() {
         let event = EVENT.lock().unwrap();
@@ -159,7 +161,7 @@ mod test {
         event.val(|_| {});
     }
 
-    #[test]
+    #[wasm_bindgen_test(unsupported = test)]
     fn debug() {
         assert_eq!("OnceEvent<i32>", &format!("{:?}", OnceEvent::<i32>::default()));
     }

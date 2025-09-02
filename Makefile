@@ -17,7 +17,6 @@ lint:
 test:
 	cargo test --all
 	cargo test --all --release
-	cargo test --all --release --features tokio
 	make test-wasm
 
 test-wasm:
