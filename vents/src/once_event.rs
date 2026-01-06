@@ -2,7 +2,7 @@ use std::{
     any::type_name,
     cell::RefCell,
     fmt::{Debug, Formatter},
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::mpsc::{Receiver, Sender, channel},
 };
 
 use log::error;
@@ -53,10 +53,10 @@ impl<T: 'static> OnceEvent<T> {
     pub fn trigger(&self, value: T) {
         if let Some(sub) = self.once_subscriber.borrow_mut().take() {
             (sub)(value);
-        } else if let Some(send) = self.once_sender.borrow_mut().take() {
-            if send.send(value).is_err() {
-                error!("Failed to once send OnceEvent of type: {}", type_name::<T>());
-            }
+        } else if let Some(send) = self.once_sender.borrow_mut().take()
+            && send.send(value).is_err()
+        {
+            error!("Failed to once send OnceEvent of type: {}", type_name::<T>());
         }
     }
 
