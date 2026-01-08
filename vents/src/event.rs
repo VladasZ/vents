@@ -47,6 +47,21 @@ impl<T: 'static> Event<T> {
     }
 }
 
+impl<T: Send + 'static> Event<T> {
+    pub fn val_async<Fut, Function>(&self, action: Function)
+    where
+        T: Send + 'static,
+        Fut: Future + Send + 'static,
+        Function: (FnMut(T) -> Fut) + Send + Clone + 'static, {
+        self.val(move |val| {
+            let mut a = action.clone();
+            hreads::spawn(async move {
+                a(val).await;
+            });
+        });
+    }
+}
+
 impl<T> Default for Event<T> {
     fn default() -> Self {
         Self {

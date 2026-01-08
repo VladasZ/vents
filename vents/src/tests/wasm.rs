@@ -30,6 +30,15 @@ fn event() {
     assert_eq!(*summ.lock().unwrap(), 40);
 }
 
+#[wasm_bindgen_test(unsupported = test)]
+fn event_async_val() {
+    let event = Event::<u32>::default();
+
+    event.val_async(async move |val| {
+        dbg!(&val);
+    });
+}
+
 static EVENT: Mutex<Event<()>> = Mutex::new(Event::const_default());
 
 #[wasm_bindgen_test(unsupported = test)]
