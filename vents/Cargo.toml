@@ -6,13 +6,13 @@ homepage = "https://github.com/VladasZ/vents"
 license = "MIT OR Apache-2.0"
 name = "vents"
 repository = "https://github.com/VladasZ/vents"
-version = "0.15.0"
+version = "0.15.1"
 
 [features]
 default = []
 
 [dependencies]
-hreads = "0.13"
+hreads = "0.14"
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
